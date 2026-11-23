@@ -139,3 +139,103 @@ class InjectionTests(IncidentTestBase):
         })
         self.assertEqual(response.status_code, 403)
         self.assertFalse(Incident.objects.filter(title="Forged").exists())
+
+
+class WorkflowTests(IncidentTestBase):
+    """The analyst workflow: role checks, status order, separation of duties, the closed lock."""
+
+    def status_url(self, incident=None):
+        # Helper: the address that changes an incident's status.
+        return reverse("incident_change_status", args=[(incident or self.incident).pk])
+
+    def assign_url(self):
+        return reverse("incident_assign", args=[self.incident.pk])
+
+    def move(self, user, status):
+        # Helper: log in as `user` and press the "Move to <status>" button.
+        self.client.force_login(user)
+        return self.client.post(self.status_url(), {"status": status})
+
+    def test_analyst_can_triage(self):
+        self.move(self.analyst, "TRIAGED")
+        self.incident.refresh_from_db()
+        self.assertEqual(self.incident.status, Incident.Status.TRIAGED)
+
+    def test_reporter_cannot_change_status(self):
+        """Role check: a reporter crafting the request by hand gets 403."""
+        response = self.move(self.alice, "TRIAGED")
+        self.assertEqual(response.status_code, 403)
+        self.incident.refresh_from_db()
+        self.assertEqual(self.incident.status, Incident.Status.OPEN)   # unchanged
+
+    def test_cannot_skip_straight_to_closed(self):
+        """Workflow order: Open can only go to Triaged."""
+        response = self.move(self.analyst, "CLOSED")
+        self.assertEqual(response.status_code, 403)
+        self.incident.refresh_from_db()
+        self.assertEqual(self.incident.status, Incident.Status.OPEN)
+
+    def test_status_change_only_accepts_post(self):
+        """A plain link (GET) can't change status; only a form with a CSRF token can."""
+        self.client.force_login(self.analyst)
+        self.assertEqual(self.client.get(self.status_url()).status_code, 405)   # 405 = method not allowed
+
+    def test_analyst_cannot_resolve_own_incident(self):
+        """Separation of duties (misuse case MC2): reporting and resolving need two different people."""
+        own = Incident.objects.create(title="Mine", description="x", reporter=self.analyst)
+        own.change_status(self.analyst, Incident.Status.TRIAGED)
+        own.change_status(self.analyst, Incident.Status.INVESTIGATING)
+        self.client.force_login(self.analyst)
+        response = self.client.post(self.status_url(own), {"status": "RESOLVED"})
+        self.assertEqual(response.status_code, 403)
+        own.refresh_from_db()
+        self.assertEqual(own.status, Incident.Status.INVESTIGATING)    # not resolved
+
+        # A different analyst can resolve it.
+        second = User.objects.create_user("sam", password="x", role=User.Role.ANALYST)
+        self.client.force_login(second)
+        self.client.post(self.status_url(own), {"status": "RESOLVED"})
+        own.refresh_from_db()
+        self.assertEqual(own.status, Incident.Status.RESOLVED)
+
+    def test_page_explains_separation_of_duties(self):
+        """The reporting analyst sees the step disabled, with the reason."""
+        own = Incident.objects.create(title="Mine", description="x", reporter=self.analyst)
+        own.change_status(self.analyst, Incident.Status.TRIAGED)
+        own.change_status(self.analyst, Incident.Status.INVESTIGATING)
+        self.client.force_login(self.analyst)
+        page = self.client.get(self.detail_url(own)).content.decode()
+        self.assertIn("another analyst has to mark it resolved", page)
+
+    def close(self):
+        # Helper: take the incident all the way to Closed, as a second analyst.
+        closer = User.objects.create_user("cara", password="x", role=User.Role.ANALYST)
+        for status in ["TRIAGED", "INVESTIGATING", "RESOLVED", "CLOSED"]:
+            self.incident.change_status(closer, status)
+
+    def test_closed_incident_is_locked(self):
+        """Closed lock (misuse case MC3): no edits, no status changes, no reassigning."""
+        self.close()
+        self.client.force_login(self.analyst)
+        edit_url = reverse("incident_edit", args=[self.incident.pk])
+        self.assertEqual(self.client.get(edit_url).status_code, 403)
+        self.assertEqual(self.client.post(self.status_url(), {"status": "INVESTIGATING"}).status_code, 403)
+        self.assertEqual(self.client.post(self.assign_url(), {"assigned_to": self.analyst.pk}).status_code, 403)
+
+    def test_analyst_can_assign_to_analyst(self):
+        self.client.force_login(self.analyst)
+        self.client.post(self.assign_url(), {"assigned_to": self.analyst.pk})
+        self.incident.refresh_from_db()
+        self.assertEqual(self.incident.assigned_to, self.analyst)
+
+    def test_cannot_assign_to_a_reporter(self):
+        """Input validation: the form only accepts Analysts and Admins as assignees."""
+        self.client.force_login(self.analyst)
+        self.client.post(self.assign_url(), {"assigned_to": self.bob.pk})   # bob is a reporter
+        self.incident.refresh_from_db()
+        self.assertIsNone(self.incident.assigned_to)
+
+    def test_reporter_cannot_assign(self):
+        """Role check on the assign view too."""
+        self.client.force_login(self.alice)
+        self.assertEqual(self.client.post(self.assign_url(), {"assigned_to": self.analyst.pk}).status_code, 403)
