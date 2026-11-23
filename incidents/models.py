@@ -4,6 +4,18 @@ from django.db import models
 from django.utils import timezone
 
 
+class IncidentQuerySet(models.QuerySet):
+    """Extra ways to filter lists of incidents."""
+
+    def visible_to(self, user):
+        # The same rule as Incident.can_view (below), applied to a whole list
+        # at once: the security team sees every incident, a reporter only
+        # sees the ones they reported. Used for the incident list page.
+        if user.is_security_team:
+            return self
+        return self.filter(reporter=user)
+
+
 class Incident(models.Model):
     class Severity(models.TextChoices):
         LOW = "LOW", "Low"
@@ -57,8 +69,11 @@ class Incident(models.Model):
     resolved_at = models.DateTimeField(null=True, blank=True)
     closed_at = models.DateTimeField(null=True, blank=True)
 
+    # Lets views write Incident.objects.visible_to(request.user).
+    objects = IncidentQuerySet.as_manager()
+
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-created_at"]  # newest incidents first
 
     def __str__(self):
         return f"#{self.pk} {self.title}"

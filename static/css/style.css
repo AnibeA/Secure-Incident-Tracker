@@ -13,3 +13,26 @@ button { font: inherit; padding: 8px 16px; border: none; border-radius: 6px; bac
 .message { padding: 10px 14px; background: #e3f3ea; border-radius: 6px; }
 .helptext, .errorlist { font-size: 0.9em; color: #5a6779; }
 .errorlist { color: #b3261e; }
+
+/* ---- Incident pages ---- */
+/* Heading and its button side by side */
+.page-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+/* Links styled as buttons ("Report an incident", "Edit") */
+.button { display: inline-block; padding: 8px 16px; border-radius: 6px; background: #2456c4; color: #fff; text-decoration: none; }
+.button.secondary { background: #fff; color: #2456c4; border: 1px solid #2456c4; }
+/* The incident list table */
+table.list { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+table.list th, table.list td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e3e8ee; }
+table.list th { font-size: 0.85em; color: #5a6779; }
+/* Status labels, one colour per status */
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.85em; background: #e6edfb; color: #2456c4; }
+.status-INVESTIGATING { background: #fbf0db; color: #9a6300; }
+.status-RESOLVED { background: #e3f3ea; color: #1b7a4c; }
+.status-CLOSED { background: #eceff3; color: #5a6779; }
+/* The details list on an incident page */
+.facts { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; }
+.facts dt { color: #5a6779; }
+.facts dd { margin: 0; }
+.description { background: #fff; padding: 12px 16px; border-radius: 8px; }
+.pager, .empty { color: #5a6779; }
+form a { margin-left: 12px; }

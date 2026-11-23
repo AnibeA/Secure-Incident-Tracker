@@ -1,12 +1,101 @@
-# Views for the incidents app. For now there's only the home page;
-# reporting, viewing and managing incidents come next in Phase 3.
+# Views for incidents: the list (home page), reporting a new incident,
+# viewing one, and editing one. Every view requires a login, and every
+# view that touches a single incident checks the user may access it.
 
-from django.contrib.auth.decorators import login_required  # blocks anyone who isn't logged in
-from django.shortcuts import render                         # fills in a template and returns it as a page
+from django.contrib import messages                          # one-off messages ("Incident reported")
+from django.contrib.auth.decorators import login_required    # blocks anyone not logged in
+from django.core.exceptions import PermissionDenied          # raising this returns "403 Forbidden"
+from django.core.paginator import Paginator                  # splits long lists into pages
+from django.http import Http404                              # raising this returns "404 Not Found"
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .forms import IncidentForm
+from .models import Incident
 
 
-@login_required  # not logged in? You're redirected to the login page instead.
+def get_incident_for(user, pk):
+    """Fetch one incident, but only if this user is allowed to see it.
+
+    Every view that opens a single incident goes through this one function,
+    so the access check (blocking IDOR) can't be forgotten on any page.
+
+    If the user isn't allowed, we answer "404 Not Found", not "403 Forbidden".
+    A 403 would confirm the incident exists; a 404 reveals nothing, so an
+    attacker can't use the response to discover which incident numbers exist.
+    """
+    incident = get_object_or_404(Incident, pk=pk)   # 404 if the number doesn't exist at all
+    if not incident.can_view(user):                 # the model's rule (Rule 2 in the study guide)
+        raise Http404("Incident not found")         # same answer as "doesn't exist"
+    return incident
+
+
+@login_required
 def home(request):
-    # request.user is the logged-in user; the template uses it to show
-    # their username and role.
-    return render(request, "home.html")
+    """The incident list. Reporters see their own; analysts and admins see all."""
+    # visible_to() applies the same access rule as can_view(), to the whole list.
+    incidents = Incident.objects.visible_to(request.user)
+
+    # Show 20 per page (NFR3), so the page stays fast as incidents pile up.
+    # ?page=2 in the address picks the page; anything invalid falls back to page 1.
+    page = Paginator(incidents, 20).get_page(request.GET.get("page"))
+
+    return render(request, "incidents/incident_list.html", {"page": page})
+
+
+@login_required
+def incident_create(request):
+    """Report a new incident. Anyone logged in can do this."""
+    if request.method == "POST":
+        # The form was submitted: check what the user typed.
+        form = IncidentForm(request.POST)
+        if form.is_valid():
+            # commit=False builds the incident without saving it yet, so we
+            # can set the reporter ourselves. It's always the logged-in user,
+            # never a value taken from the request.
+            incident = form.save(commit=False)
+            incident.reporter = request.user
+            incident.save()
+            messages.success(request, "Incident reported.")
+            return redirect("incident_detail", pk=incident.pk)
+    else:
+        # First visit (GET): show an empty form.
+        form = IncidentForm()
+
+    # Either a first visit, or the form had errors: show it (with the errors).
+    return render(request, "incidents/incident_form.html", {"form": form, "is_new": True})
+
+
+@login_required
+def incident_detail(request, pk):
+    """Show one incident, if the user is allowed to see it."""
+    incident = get_incident_for(request.user, pk)   # IDOR check happens here
+    return render(request, "incidents/incident_detail.html", {
+        "incident": incident,
+        # Tells the template whether to show the Edit button. Hiding the
+        # button is only for convenience; the edit view checks again.
+        "can_edit": incident.can_edit_details(request.user),
+    })
+
+
+@login_required
+def incident_edit(request, pk):
+    """Edit an incident's details, if the rules allow it."""
+    incident = get_incident_for(request.user, pk)   # can they see it at all? (404 if not)
+
+    # They can see it, but can they edit it? Reporters only while it's Open,
+    # and nobody once it's Closed. Here 403 is fine: they already know it exists.
+    if not incident.can_edit_details(request.user):
+        raise PermissionDenied("You can't edit this incident.")
+
+    if request.method == "POST":
+        # instance=incident means "update this incident" rather than create a new one.
+        form = IncidentForm(request.POST, instance=incident)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Incident updated.")
+            return redirect("incident_detail", pk=incident.pk)
+    else:
+        # First visit: show the form filled in with the current details.
+        form = IncidentForm(instance=incident)
+
+    return render(request, "incidents/incident_form.html", {"form": form, "incident": incident, "is_new": False})

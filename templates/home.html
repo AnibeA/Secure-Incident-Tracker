@@ -1,7 +1,0 @@
-{% extends "base.html" %}
-{# The home page, only reachable when logged in (see @login_required in incidents/views.py). #}
-{% block content %}
-{# user.get_role_display turns the stored value "REPORTER" into "Reporter". #}
-<h1>Welcome, {{ user.username }}</h1>
-<p>You are signed in as a <strong>{{ user.get_role_display }}</strong>.</p>
-{% endblock %}

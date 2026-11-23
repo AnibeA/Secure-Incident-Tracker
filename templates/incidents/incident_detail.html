@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% comment %}
+  One incident. The view only gets this far if the user may see it
+  (get_incident_for in incidents/views.py); otherwise they get a 404.
+{% endcomment %}
+{% block title %}Incident #{{ incident.pk }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'home' %}">&larr; Back to incidents</a></p>
+
+<div class="page-head">
+  <h1>#{{ incident.pk }} {{ incident.title }}</h1>
+  {# The Edit button only appears when the rules allow editing. The edit view checks again anyway. #}
+  {% if can_edit %}<a class="button secondary" href="{% url 'incident_edit' incident.pk %}">Edit</a>{% endif %}
+</div>
+
+<dl class="facts">
+  <dt>Status</dt><dd><span class="pill status-{{ incident.status }}">{{ incident.get_status_display }}</span></dd>
+  <dt>Severity</dt><dd>{{ incident.get_severity_display }}</dd>
+  <dt>Category</dt><dd>{{ incident.get_category_display }}</dd>
+  <dt>Reported by</dt><dd>{{ incident.reporter.username }}, {{ incident.created_at|date:"j M Y, H:i" }}</dd>
+  {# "default" shows "Unassigned" when nobody is assigned yet. #}
+  <dt>Assigned to</dt><dd>{{ incident.assigned_to.username|default:"Unassigned" }}</dd>
+</dl>
+
+<h2>Description</h2>
+{# linebreaks keeps the user's paragraphs. It escapes the text first, so a <script> typed here shows as text and never runs (blocks stored XSS). #}
+<div class="description">{{ incident.description|linebreaks }}</div>
+{% endblock %}

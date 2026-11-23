@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{# One template for both reporting a new incident and editing an existing one. #}
+{% block title %}{% if is_new %}Report an incident{% else %}Edit incident{% endif %}{% endblock %}
+{% block content %}
+<h1>{% if is_new %}Report an incident{% else %}Edit incident #{{ incident.pk }}{% endif %}</h1>
+<form method="post">
+  {# CSRF token: blocks other websites from submitting this form as you. #}
+  {% csrf_token %}
+  {# Draws the title, category, severity and description fields, with any errors. #}
+  {{ form.as_p }}
+  <button type="submit">{% if is_new %}Submit report{% else %}Save changes{% endif %}</button>
+  {# Cancel goes back to where the user came from. #}
+  <a href="{% if is_new %}{% url 'home' %}{% else %}{% url 'incident_detail' incident.pk %}{% endif %}">Cancel</a>
+</form>
+{% endblock %}

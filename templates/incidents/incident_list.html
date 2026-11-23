@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% comment %}
+  The home page: a list of incidents. The view has already filtered it,
+  so reporters only ever receive their own incidents here; the security
+  team receives all of them. 20 per page (NFR3).
+{% endcomment %}
+{% block title %}Incidents{% endblock %}
+{% block content %}
+<div class="page-head">
+  {# Reporters see "My incidents"; analysts and admins see every incident. #}
+  <h1>{% if user.is_security_team %}All incidents{% else %}My incidents{% endif %}</h1>
+  <a class="button" href="{% url 'incident_create' %}">Report an incident</a>
+</div>
+
+{% if page.object_list %}
+  <table class="list">
+    <thead>
+      <tr>
+        <th>#</th><th>Title</th><th>Severity</th><th>Status</th>
+        {# Only the security team needs to see who reported each incident. #}
+        {% if user.is_security_team %}<th>Reporter</th>{% endif %}
+        <th>Reported</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for incident in page.object_list %}
+        <tr>
+          <td>{{ incident.pk }}</td>
+          {# The title is escaped automatically, so typed HTML shows as text. #}
+          <td><a href="{% url 'incident_detail' incident.pk %}">{{ incident.title }}</a></td>
+          <td>{{ incident.get_severity_display }}</td>
+          {# The CSS class (e.g. status-OPEN) colours the status label. #}
+          <td><span class="pill status-{{ incident.status }}">{{ incident.get_status_display }}</span></td>
+          {% if user.is_security_team %}<td>{{ incident.reporter.username }}</td>{% endif %}
+          <td>{{ incident.created_at|date:"j M Y" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# Page links, only shown when there's more than one page. #}
+  {% if page.has_other_pages %}
+    <p class="pager">
+      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Previous</a>{% endif %}
+      Page {{ page.number }} of {{ page.paginator.num_pages }}
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next</a>{% endif %}
+    </p>
+  {% endif %}
+{% else %}
+  <p class="empty">No incidents yet.</p>
+{% endif %}
+{% endblock %}
