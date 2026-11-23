@@ -2,6 +2,7 @@
 
 from django import forms
 
+from accounts.models import User
 from .models import Incident
 
 
@@ -24,3 +25,17 @@ class IncidentForm(forms.ModelForm):
 
         # Show the description as a large text box instead of a one-line input.
         widgets = {"description": forms.Textarea(attrs={"rows": 6})}
+
+
+class AssignForm(forms.Form):
+    """Pick which analyst handles an incident (security team only)."""
+
+    # The dropdown only offers Analysts and Admins. If someone edits the
+    # request to send a reporter's ID instead, the form rejects it, because
+    # that ID isn't in this list (validation on the server, not the browser).
+    assigned_to = forms.ModelChoiceField(
+        queryset=User.objects.filter(role__in=[User.Role.ANALYST, User.Role.ADMIN]).order_by("username"),
+        required=False,                 # leaving it empty means "Unassigned"
+        empty_label="Unassigned",
+        label="Assigned to",
+    )

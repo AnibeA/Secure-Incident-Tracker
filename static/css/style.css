@@ -36,3 +36,15 @@ table.list th { font-size: 0.85em; color: #5a6779; }
 .description { background: #fff; padding: 12px 16px; border-radius: 8px; }
 .pager, .empty { color: #5a6779; }
 form a { margin-left: 12px; }
+
+/* ---- Workflow panel (analysts and admins) ---- */
+.panel { background: #fff; border-radius: 8px; padding: 12px 16px; margin: 20px 0; }
+.panel h2 { margin-top: 0; }
+.steps { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.steps form { margin: 0; }
+.assign { display: flex; gap: 8px; align-items: center; }
+button.secondary { background: #fff; color: #2456c4; border: 1px solid #2456c4; }
+button:disabled { background: #c8d0da; cursor: not-allowed; }
+.muted { color: #5a6779; font-size: 0.9em; }
+/* Error messages in red, success in green */
+.message.error { background: #fbe6e4; color: #b3261e; }

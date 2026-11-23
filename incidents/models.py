@@ -108,6 +108,24 @@ class Incident(models.Model):
             return False
         return True
 
+    def next_steps(self, user):
+        """The status changes on offer from here, and whether this user may make each.
+
+        Used by the incident page to draw the workflow buttons. A step the
+        user isn't allowed (because they reported the incident) is still
+        listed, so the page can explain why instead of hiding it silently.
+        """
+        order = list(self.Status)   # Open, Triaged, Investigating, Resolved, Closed
+        steps = sorted(self.ALLOWED_TRANSITIONS[self.status], key=order.index)
+        return [
+            {
+                "status": step,                                    # stored value, e.g. "RESOLVED"
+                "label": self.Status(step).label,                  # display text, e.g. "Resolved"
+                "allowed": self.can_change_status(user, step),     # the real rule decides
+            }
+            for step in steps
+        ]
+
     def change_status(self, user, new_status):
         if not self.can_change_status(user, new_status):
             raise PermissionDenied("You can't make that status change.")

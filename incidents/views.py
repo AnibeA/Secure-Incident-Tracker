@@ -1,6 +1,8 @@
 # Views for incidents: the list (home page), reporting a new incident,
-# viewing one, and editing one. Every view requires a login, and every
-# view that touches a single incident checks the user may access it.
+# viewing one, editing one, and the analyst workflow (status changes and
+# assigning). Every view requires a login, every view that touches a single
+# incident checks the user may access it, and analyst-only views also check
+# the user's role.
 
 from django.contrib import messages                          # one-off messages ("Incident reported")
 from django.contrib.auth.decorators import login_required    # blocks anyone not logged in
@@ -8,8 +10,10 @@ from django.core.exceptions import PermissionDenied          # raising this retu
 from django.core.paginator import Paginator                  # splits long lists into pages
 from django.http import Http404                              # raising this returns "404 Not Found"
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST        # refuses anything but a form submission (POST)
 
-from .forms import IncidentForm
+from accounts.decorators import security_team_required       # our role check: Analysts and Admins only
+from .forms import AssignForm, IncidentForm
 from .models import Incident
 
 
@@ -69,12 +73,18 @@ def incident_create(request):
 def incident_detail(request, pk):
     """Show one incident, if the user is allowed to see it."""
     incident = get_incident_for(request.user, pk)   # IDOR check happens here
-    return render(request, "incidents/incident_detail.html", {
+    context = {
         "incident": incident,
         # Tells the template whether to show the Edit button. Hiding the
         # button is only for convenience; the edit view checks again.
         "can_edit": incident.can_edit_details(request.user),
-    })
+    }
+    # Only the security team gets the workflow buttons and the assign box.
+    if request.user.is_security_team:
+        context["next_steps"] = incident.next_steps(request.user)
+        # initial= pre-selects whoever is assigned now.
+        context["assign_form"] = AssignForm(initial={"assigned_to": incident.assigned_to})
+    return render(request, "incidents/incident_detail.html", context)
 
 
 @login_required
@@ -99,3 +109,42 @@ def incident_edit(request, pk):
         form = IncidentForm(instance=incident)
 
     return render(request, "incidents/incident_form.html", {"form": form, "incident": incident, "is_new": False})
+
+
+@security_team_required   # role check: Reporters get 403 before anything else happens
+@require_POST             # only a submitted form (POST, with its CSRF token) can change status
+def incident_change_status(request, pk):
+    """Move an incident to its next status (Analysts and Admins only)."""
+    incident = get_incident_for(request.user, pk)
+    new_status = request.POST.get("status", "")   # the status the button asked for
+
+    # change_status() applies every rule in the model: the allowed order of
+    # statuses, the closed lock, and separation of duties (nobody resolves or
+    # closes an incident they reported). If any rule says no, it raises
+    # PermissionDenied and the user gets "403 Forbidden"; nothing is saved.
+    incident.change_status(request.user, new_status)
+
+    messages.success(request, f"Status changed to {incident.get_status_display()}.")
+    return redirect("incident_detail", pk=incident.pk)
+
+
+@security_team_required
+@require_POST
+def incident_assign(request, pk):
+    """Assign an incident to an analyst (Analysts and Admins only)."""
+    incident = get_incident_for(request.user, pk)
+
+    # A closed incident is locked: nothing about it can change, including who owns it.
+    if incident.is_locked:
+        raise PermissionDenied("Closed incidents can't be reassigned.")
+
+    form = AssignForm(request.POST)
+    if form.is_valid():
+        # cleaned_data holds the checked value: an Analyst/Admin, or None for "Unassigned".
+        incident.assigned_to = form.cleaned_data["assigned_to"]
+        incident.save()
+        messages.success(request, "Assignment updated.")
+    else:
+        # Someone sent a user who isn't on the security team (or an invalid ID).
+        messages.error(request, "That person can't be assigned. Pick an analyst or admin.")
+    return redirect("incident_detail", pk=incident.pk)

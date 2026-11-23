@@ -31,8 +31,8 @@
     {% endif %}
   </header>
   <main>
-    {# One-off messages, e.g. "Account created. You can now log in." #}
-    {% for message in messages %}<p class="message">{{ message }}</p>{% endfor %}
+    {# One-off messages, e.g. "Account created". message.tags adds "success" or "error" for the colour. #}
+    {% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}
     {# Each page puts its own content here. #}
     {% block content %}{% endblock %}
   </main>

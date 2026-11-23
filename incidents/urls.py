@@ -11,4 +11,7 @@ urlpatterns = [
     path("incidents/new/", views.incident_create, name="incident_create"),        # report an incident
     path("incidents/<int:pk>/", views.incident_detail, name="incident_detail"),   # view one incident
     path("incidents/<int:pk>/edit/", views.incident_edit, name="incident_edit"),  # edit one incident
+    # Analyst workflow (security team only; both only accept form submissions):
+    path("incidents/<int:pk>/status/", views.incident_change_status, name="incident_change_status"),
+    path("incidents/<int:pk>/assign/", views.incident_assign, name="incident_assign"),
 ]

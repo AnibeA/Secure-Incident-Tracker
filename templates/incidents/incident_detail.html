@@ -20,7 +20,48 @@
   <dt>Reported by</dt><dd>{{ incident.reporter.username }}, {{ incident.created_at|date:"j M Y, H:i" }}</dd>
   {# "default" shows "Unassigned" when nobody is assigned yet. #}
   <dt>Assigned to</dt><dd>{{ incident.assigned_to.username|default:"Unassigned" }}</dd>
+  {# Only shown once they've happened. #}
+  {% if incident.resolved_at %}<dt>Resolved</dt><dd>{{ incident.resolved_at|date:"j M Y, H:i" }}</dd>{% endif %}
+  {% if incident.closed_at %}<dt>Closed</dt><dd>{{ incident.closed_at|date:"j M Y, H:i" }}</dd>{% endif %}
 </dl>
+
+{% comment %}
+  The workflow panel: only Analysts and Admins get it (the view only sends
+  next_steps to the security team). Hiding it from reporters is convenience;
+  the status and assign views check the role again on the server.
+{% endcomment %}
+{% if user.is_security_team %}
+  <section class="panel">
+    <h2>Workflow</h2>
+    {% if incident.is_locked %}
+      <p class="muted">This incident is closed and locked. It can't be changed or reassigned.</p>
+    {% else %}
+      <div class="steps">
+        {% for step in next_steps %}
+          {% if step.allowed %}
+            {# Each button is its own small POST form carrying a CSRF token and the target status. #}
+            <form method="post" action="{% url 'incident_change_status' incident.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="{{ step.status }}">
+              <button type="submit">Move to {{ step.label }}</button>
+            </form>
+          {% else %}
+            {# Separation of duties: explain why, rather than silently hiding the step. #}
+            <button type="button" disabled>Move to {{ step.label }}</button>
+            <p class="muted">You reported this incident, so another analyst has to mark it {{ step.label|lower }}.</p>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {# Assign box: the dropdown only lists Analysts and Admins. #}
+      <form method="post" action="{% url 'incident_assign' incident.pk %}" class="assign">
+        {% csrf_token %}
+        {{ assign_form.assigned_to.label_tag }} {{ assign_form.assigned_to }}
+        <button type="submit" class="secondary">Save</button>
+      </form>
+    {% endif %}
+  </section>
+{% endif %}
 
 <h2>Description</h2>
 {# linebreaks keeps the user's paragraphs. It escapes the text first, so a <script> typed here shows as text and never runs (blocks stored XSS). #}
