@@ -1,0 +1,40 @@
+{% comment %}
+  base.html is the shared layout every page builds on: the top bar,
+  the messages area, and a "content" block each page fills in.
+  Django escapes every {{ value }} automatically, so text a user typed
+  is shown as text and never runs as code (this blocks XSS).
+{% endcomment %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# Each page can set its own title; otherwise this default is used. #}
+  <title>{% block title %}Secure Incident Tracker{% endblock %}</title>
+  {# The stylesheet is served from our own static folder, not a third-party site. #}
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <a href="{% url 'home' %}" class="brand">Secure Incident Tracker</a>
+    {# Only logged-in users see their name, role and the log-out button. #}
+    {% if user.is_authenticated %}
+      <nav>
+        <span>{{ user.username }} &middot; {{ user.get_role_display }}</span>
+        {# Logout is a POST form with a CSRF token, never a plain link. #}
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit">Log out</button>
+        </form>
+      </nav>
+    {% endif %}
+  </header>
+  <main>
+    {# One-off messages, e.g. "Account created. You can now log in." #}
+    {% for message in messages %}<p class="message">{{ message }}</p>{% endfor %}
+    {# Each page puts its own content here. #}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -18,6 +18,15 @@ class User(AbstractUser):
     # Only an admin can promote someone to analyst or admin.
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.REPORTER)
 
+    def save(self, *args, **kwargs):
+        # save() runs every time a user is written to the database.
+        # A superuser made with `createsuperuser` gets the Admin role,
+        # so the first account can manage everyone else. Without this,
+        # it would default to Reporter like every other new account.
+        if self.is_superuser:
+            self.role = self.Role.ADMIN
+        super().save(*args, **kwargs)
+
     @property
     def is_reporter(self):
         return self.role == self.Role.REPORTER

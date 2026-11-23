@@ -61,7 +61,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -95,7 +95,8 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 
+        'OPTIONS': {'min_length': 12},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -134,3 +135,18 @@ MAILERS = {
 }
 
 AUTH_USER_MODEL = "accounts.User"
+
+# Where Django looks for our own static files (CSS, images) during development.
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# How passwords are hashed before storing them (SR1). Argon2 is listed first,
+# so every new password uses it. PBKDF2 stays as a fallback so any older
+# hashes can still be checked; they're upgraded to Argon2 at the next login.
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+]
+
+LOGIN_URL = 'login'            # Where @login_required sends users who aren't logged in.
+LOGIN_REDIRECT_URL = 'home'    # Where users land after logging in.
+LOGOUT_REDIRECT_URL = 'login'  # Where users land after logging out.

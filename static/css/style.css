@@ -1,0 +1,15 @@
+/* Site-wide styles. Kept in our own static folder (no outside CDN), so a
+   Content Security Policy can later allow styles from our own site only. */
+body { margin: 0; font-family: system-ui, sans-serif; background: #f4f6f9; color: #1b2430; }
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: #1b2430; color: #fff; }
+.topbar a, .topbar span { color: #fff; text-decoration: none; }
+.brand { font-weight: 600; }
+.topbar nav { display: flex; gap: 12px; align-items: center; }
+.topbar form { margin: 0; }
+main { max-width: 720px; margin: 32px auto; padding: 0 16px; }
+form p { display: flex; flex-direction: column; gap: 4px; }
+input, select, textarea { font: inherit; padding: 8px; border: 1px solid #c8d0da; border-radius: 6px; }
+button { font: inherit; padding: 8px 16px; border: none; border-radius: 6px; background: #2456c4; color: #fff; cursor: pointer; }
+.message { padding: 10px 14px; background: #e3f3ea; border-radius: 6px; }
+.helptext, .errorlist { font-size: 0.9em; color: #5a6779; }
+.errorlist { color: #b3261e; }

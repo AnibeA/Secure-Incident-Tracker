@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{# The sign-up page. Its form (SignUpForm) only has username, email and two password fields. #}
+{% block title %}Sign up{% endblock %}
+{% block content %}
+<h1>Create an account</h1>
+<form method="post">
+  {# CSRF token: blocks other websites from submitting this form for you. #}
+  {% csrf_token %}
+  {# Draws each field with its help text, e.g. the password rules. #}
+  {{ form.as_p }}
+  <button type="submit">Sign up</button>
+</form>
+<p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+{% endblock %}

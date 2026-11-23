@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{# Django's login view looks for this exact file: registration/login.html #}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<h1>Log in</h1>
+<form method="post">
+  {# The CSRF token proves this form came from our site, not another one. #}
+  {% csrf_token %}
+  {# Draws the username and password fields, plus any error messages. #}
+  {{ form.as_p }}
+  <button type="submit">Log in</button>
+</form>
+<p>No account yet? <a href="{% url 'signup' %}">Sign up</a></p>
+{% endblock %}
