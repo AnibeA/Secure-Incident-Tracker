@@ -62,3 +62,48 @@ class LoginTests(TestCase):
         """The first account made with createsuperuser can manage everyone else."""
         admin = User.objects.create_superuser("root", password=STRONG_PASSWORD)
         self.assertEqual(admin.role, User.Role.ADMIN)
+
+
+class UserManagementTests(TestCase):
+    """Only admins can change roles, and nobody can change their own."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user("adele", password="x", role=User.Role.ADMIN)
+        self.analyst = User.objects.create_user("ana", password="x", role=User.Role.ANALYST)
+        self.reporter = User.objects.create_user("rob", password="x")
+
+    def change_role(self, actor, target, role):
+        # Helper: log in as `actor` and submit the role form for `target`.
+        self.client.force_login(actor)
+        return self.client.post(reverse("user_change_role", args=[target.pk]),
+                                {f"user{target.pk}-role": role})
+
+    def test_admin_can_promote_a_reporter(self):
+        self.change_role(self.admin, self.reporter, "ANALYST")
+        self.reporter.refresh_from_db()
+        self.assertEqual(self.reporter.role, User.Role.ANALYST)
+
+    def test_analyst_cannot_manage_users(self):
+        """Role check: analysts get 403, on the list and on changing roles."""
+        self.client.force_login(self.analyst)
+        self.assertEqual(self.client.get(reverse("user_list")).status_code, 403)
+        self.assertEqual(self.change_role(self.analyst, self.reporter, "ADMIN").status_code, 403)
+        self.reporter.refresh_from_db()
+        self.assertEqual(self.reporter.role, User.Role.REPORTER)
+
+    def test_reporter_cannot_promote_themselves(self):
+        """Elevation of privilege: a reporter can't make themselves an admin."""
+        response = self.change_role(self.reporter, self.reporter, "ADMIN")
+        self.assertEqual(response.status_code, 403)
+        self.reporter.refresh_from_db()
+        self.assertEqual(self.reporter.role, User.Role.REPORTER)
+
+    def test_admin_cannot_change_own_role(self):
+        """Stops an admin locking themselves (and everyone) out of user management."""
+        self.assertEqual(self.change_role(self.admin, self.admin, "REPORTER").status_code, 403)
+
+    def test_invalid_role_is_rejected(self):
+        """Input validation: only the three real roles are accepted."""
+        self.change_role(self.admin, self.reporter, "SUPERADMIN")
+        self.reporter.refresh_from_db()
+        self.assertEqual(self.reporter.role, User.Role.REPORTER)
