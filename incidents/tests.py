@@ -283,3 +283,19 @@ class CommentTests(IncidentTestBase):
         page = self.client.get(self.detail_url()).content.decode()
         self.assertNotIn("<script>alert(1)", page)
         self.assertIn("&lt;script&gt;", page)
+
+
+class NoLeakTests(IncidentTestBase):
+    def test_hidden_incident_looks_exactly_like_a_missing_one(self):
+        """IDOR, no leaks: bob gets the identical page for alice's incident and for a number that doesn't exist."""
+        self.client.force_login(self.bob)
+        hidden = self.client.get(self.detail_url())                                   # exists, but not his
+        missing = self.client.get(reverse("incident_detail", args=[99999]))           # doesn't exist
+        self.assertEqual(hidden.status_code, missing.status_code)                     # both 404
+
+        # The CSRF token in the logout form is re-randomised on every page
+        # load by design, so blank it out; everything else must be identical.
+        import re
+        def without_token(response):
+            return re.sub(rb'name="csrfmiddlewaretoken" value="[^"]+"', b"", response.content)
+        self.assertEqual(without_token(hidden), without_token(missing))

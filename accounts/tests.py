@@ -107,3 +107,68 @@ class UserManagementTests(TestCase):
         self.change_role(self.admin, self.reporter, "SUPERADMIN")
         self.reporter.refresh_from_db()
         self.assertEqual(self.reporter.role, User.Role.REPORTER)
+
+
+class LockoutTests(TestCase):
+    """Login lockout with django-axes (SR1, misuse case MC4)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("vic", password=STRONG_PASSWORD)
+
+    def try_login(self, password):
+        # Helper: submit the real login form, exactly like a browser would.
+        return self.client.post(reverse("login"), {"username": "vic", "password": password})
+
+    def test_correct_password_logs_in(self):
+        response = self.try_login(STRONG_PASSWORD)
+        self.assertRedirects(response, reverse("home"))   # sent to the home page = logged in
+
+    def test_account_locks_after_five_failures(self):
+        """Brute force: after 5 wrong passwords, even the RIGHT password is refused."""
+        for _ in range(5):
+            self.try_login("wrong-password-123")
+        response = self.try_login(STRONG_PASSWORD)          # correct, but too late
+        self.assertEqual(response.status_code, 429)         # 429 = too many requests
+        self.assertContains(response, "Too many failed logins", status_code=429)
+        self.assertNotIn("_auth_user_id", self.client.session)   # not logged in
+
+
+class HardeningTests(TestCase):
+    """Security headers, cookie flags and error pages (SR3, SR5).
+
+    Tests always run with DEBUG off, so these check what a real visitor
+    would get from the live site, not the developer's debug pages.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user("hal", password=STRONG_PASSWORD)
+
+    def test_security_headers_are_sent(self):
+        response = self.client.get(reverse("login"))
+        csp = response["Content-Security-Policy"]
+        self.assertIn("script-src 'self'", csp)                         # scripts only from our own site
+        self.assertIn("frame-ancestors 'none'", csp)                    # nobody may frame us
+        self.assertEqual(response["X-Frame-Options"], "DENY")          # clickjacking, older browsers
+        self.assertEqual(response["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
+
+    def test_session_cookie_is_httponly_and_samesite(self):
+        """The session cookie can't be read by JavaScript and isn't sent cross-site."""
+        response = self.client.post(reverse("login"), {"username": "hal", "password": STRONG_PASSWORD})
+        cookie = response.cookies["sessionid"]
+        self.assertTrue(cookie["httponly"])
+        self.assertEqual(cookie["samesite"], "Lax")
+
+    def test_session_expires_after_30_minutes_idle(self):
+        from django.conf import settings
+        self.assertEqual(settings.SESSION_COOKIE_AGE, 1800)      # 30 minutes, in seconds
+        self.assertTrue(settings.SESSION_SAVE_EVERY_REQUEST)     # timer restarts on every click
+
+    def test_404_page_reveals_nothing(self):
+        """With DEBUG off, errors show our own page: no code, settings or URL list."""
+        self.client.force_login(self.user)
+        response = self.client.get("/this-page-does-not-exist/")
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, "Page not found", status_code=404)
+        self.assertNotContains(response, "URLconf", status_code=404)          # Django's debug page text
+        self.assertNotContains(response, "Traceback", status_code=404)
