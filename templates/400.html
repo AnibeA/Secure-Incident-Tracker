@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{# Shown for malformed requests, e.g. a request for a host not in ALLOWED_HOSTS. #}
+{% block title %}Bad request{% endblock %}
+{% block content %}
+<h1>Something was wrong with that request</h1>
+<p><a href="{% url 'home' %}">Back to incidents</a></p>
+{% endblock %}

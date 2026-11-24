@@ -1,0 +1,13 @@
+{% comment %}
+  Shown when the server hits an unexpected error. Deliberately standalone
+  (it doesn't extend base.html): if something is broken, this page must not
+  depend on anything else working. It reveals nothing about the code.
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Server error</title></head>
+<body>
+  <h1>Something went wrong</h1>
+  <p>The error has been noted. Please try again later.</p>
+</body>
+</html>

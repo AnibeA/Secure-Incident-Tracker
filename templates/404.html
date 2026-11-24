@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{# Shown for unknown addresses AND for incidents you're not allowed to see, so the two look identical. #}
+{% block title %}Not found{% endblock %}
+{% block content %}
+<h1>Page not found</h1>
+<p><a href="{% url 'home' %}">Back to incidents</a></p>
+{% endblock %}

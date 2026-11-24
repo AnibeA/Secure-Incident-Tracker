@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{# Shown instead of Django's debug page when access is refused (DEBUG off). No internal details. #}
+{% block title %}Not allowed{% endblock %}
+{% block content %}
+<h1>You don't have permission to do that</h1>
+<p><a href="{% url 'home' %}">Back to incidents</a></p>
+{% endblock %}
