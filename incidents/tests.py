@@ -239,3 +239,47 @@ class WorkflowTests(IncidentTestBase):
         """Role check on the assign view too."""
         self.client.force_login(self.alice)
         self.assertEqual(self.client.post(self.assign_url(), {"assigned_to": self.analyst.pk}).status_code, 403)
+
+
+class CommentTests(IncidentTestBase):
+    """Comments: same access rules as viewing, the closed lock, and escaping."""
+
+    def comment_url(self):
+        return reverse("comment_add", args=[self.incident.pk])
+
+    def test_reporter_can_comment_on_own_incident(self):
+        self.client.force_login(self.alice)
+        self.client.post(self.comment_url(), {"body": "Any update?"})
+        comment = self.incident.comments.get()             # exactly one comment
+        self.assertEqual(comment.author, self.alice)        # author set by the server
+
+    def test_cannot_comment_on_someone_elses_incident(self):
+        """IDOR on comments: bob can't post on alice's incident (404, nothing saved)."""
+        self.client.force_login(self.bob)
+        response = self.client.post(self.comment_url(), {"body": "Sneaky"})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.incident.comments.count(), 0)
+
+    def test_cannot_post_as_someone_else(self):
+        """Mass assignment: an author field in the request is ignored."""
+        self.client.force_login(self.alice)
+        self.client.post(self.comment_url(), {"body": "Hi", "author": self.analyst.pk})
+        self.assertEqual(self.incident.comments.get().author, self.alice)
+
+    def test_cannot_comment_on_closed_incident(self):
+        """Closed lock covers comments too (403, nothing saved)."""
+        closer = User.objects.create_user("cara", password="x", role=User.Role.ANALYST)
+        for status in ["TRIAGED", "INVESTIGATING", "RESOLVED", "CLOSED"]:
+            self.incident.change_status(closer, status)
+        self.client.force_login(self.alice)
+        self.assertEqual(self.client.post(self.comment_url(), {"body": "Late"}).status_code, 403)
+        self.assertEqual(self.incident.comments.count(), 0)
+
+    def test_script_in_comment_is_escaped(self):
+        """Stored XSS in comments: shown as text, never run."""
+        self.client.force_login(self.alice)
+        self.client.post(self.comment_url(), {"body": "<script>alert(1)</script>"})
+        self.client.force_login(self.analyst)
+        page = self.client.get(self.detail_url()).content.decode()
+        self.assertNotIn("<script>alert(1)", page)
+        self.assertIn("&lt;script&gt;", page)

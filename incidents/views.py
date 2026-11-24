@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST        # refuses anything but a form submission (POST)
 
 from accounts.decorators import security_team_required       # our role check: Analysts and Admins only
-from .forms import AssignForm, IncidentForm
+from .forms import AssignForm, CommentForm, IncidentForm
 from .models import Incident
 
 
@@ -78,6 +78,11 @@ def incident_detail(request, pk):
         # Tells the template whether to show the Edit button. Hiding the
         # button is only for convenience; the edit view checks again.
         "can_edit": incident.can_edit_details(request.user),
+        # Comments, oldest first. select_related fetches each author in the
+        # same database query instead of one extra query per comment.
+        "comments": incident.comments.select_related("author"),
+        # An empty comment box, unless the incident is closed (then no box).
+        "comment_form": None if incident.is_locked else CommentForm(),
     }
     # Only the security team gets the workflow buttons and the assign box.
     if request.user.is_security_team:
@@ -148,3 +153,28 @@ def incident_assign(request, pk):
         # Someone sent a user who isn't on the security team (or an invalid ID).
         messages.error(request, "That person can't be assigned. Pick an analyst or admin.")
     return redirect("incident_detail", pk=incident.pk)
+
+
+@login_required
+@require_POST   # comments are only ever added by submitting the form
+def comment_add(request, pk):
+    """Add a comment to an incident the user can see."""
+    # The same access check as viewing: you can only comment on incidents
+    # you're allowed to see (another reporter's incident gives 404).
+    incident = get_incident_for(request.user, pk)
+
+    # Closed incidents are locked: no new comments either.
+    if incident.is_locked:
+        raise PermissionDenied("You can't comment on a closed incident.")
+
+    form = CommentForm(request.POST)
+    if form.is_valid():
+        comment = form.save(commit=False)   # build it, but don't save yet...
+        comment.incident = incident         # ...so the server sets which incident
+        comment.author = request.user       # ...and who wrote it
+        comment.save()
+        messages.success(request, "Comment added.")
+    else:
+        messages.error(request, "Your comment was empty or too long (3,000 characters maximum).")
+    # "#comments" scrolls the page straight down to the comments section.
+    return redirect(f"{incident.get_absolute_url()}#comments")

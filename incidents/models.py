@@ -78,6 +78,12 @@ class Incident(models.Model):
     def __str__(self):
         return f"#{self.pk} {self.title}"
 
+    def get_absolute_url(self):
+        # The address of this incident's page, e.g. /incidents/7/.
+        # reverse() builds it from the URL name, so it never goes out of date.
+        from django.urls import reverse
+        return reverse("incident_detail", args=[self.pk])
+
     # ---- Business rules -------------------------------------------------
     # Kept on the model, not in the views, so every view, the admin site
     # and the tests all go through the same checks.

@@ -4,7 +4,7 @@
 from django.contrib.auth import views as auth_views  # Django's built-in login and logout views
 from django.urls import path                         # path("address/", view, name="...")
 
-from .views import SignUpView                        # our sign-up view
+from .views import SignUpView, user_change_role, user_list   # our own views
 
 urlpatterns = [
     # /accounts/signup/ shows the sign-up form. name="signup" lets templates
@@ -21,4 +21,8 @@ urlpatterns = [
     # with a CSRF token, so a malicious link or image on another site can't
     # log you out.
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+
+    # User management (admins only): the list of users, and changing a role.
+    path("users/", user_list, name="user_list"),
+    path("users/<int:pk>/role/", user_change_role, name="user_change_role"),
 ]

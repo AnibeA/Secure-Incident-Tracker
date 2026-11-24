@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% comment %}
+  User management (admins only). Each row has its own small form that
+  changes one user's role. The view checks the role again on the server.
+{% endcomment %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<h1>Users</h1>
+<table class="list">
+  <thead><tr><th>Username</th><th>Joined</th><th>Role</th></tr></thead>
+  <tbody>
+    {% for person, form in rows %}
+      <tr>
+        <td>{{ person.username }}</td>
+        <td>{{ person.date_joined|date:"j M Y" }}</td>
+        <td>
+          {% if person == user %}
+            {# Admins can't change their own role (prevents locking yourself out). #}
+            {{ person.get_role_display }} <span class="muted">(you)</span>
+          {% elif person.is_superuser %}
+            {{ person.get_role_display }} <span class="muted">(main admin account)</span>
+          {% else %}
+            <form method="post" action="{% url 'user_change_role' person.pk %}" class="assign">
+              {% csrf_token %}
+              {{ form.role }}
+              <button type="submit" class="secondary">Save</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

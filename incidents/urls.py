@@ -14,4 +14,6 @@ urlpatterns = [
     # Analyst workflow (security team only; both only accept form submissions):
     path("incidents/<int:pk>/status/", views.incident_change_status, name="incident_change_status"),
     path("incidents/<int:pk>/assign/", views.incident_assign, name="incident_assign"),
+    # Comments (anyone who can see the incident; form submissions only):
+    path("incidents/<int:pk>/comments/", views.comment_add, name="comment_add"),
 ]

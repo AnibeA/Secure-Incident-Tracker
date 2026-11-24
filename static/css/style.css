@@ -48,3 +48,7 @@ button:disabled { background: #c8d0da; cursor: not-allowed; }
 .muted { color: #5a6779; font-size: 0.9em; }
 /* Error messages in red, success in green */
 .message.error { background: #fbe6e4; color: #b3261e; }
+
+/* ---- Comments ---- */
+.comment { background: #fff; border-radius: 8px; padding: 8px 16px; margin-bottom: 8px; }
+.comment .muted { margin-bottom: 0; }

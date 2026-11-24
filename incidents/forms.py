@@ -3,7 +3,7 @@
 from django import forms
 
 from accounts.models import User
-from .models import Incident
+from .models import Comment, Incident
 
 
 class IncidentForm(forms.ModelForm):
@@ -39,3 +39,17 @@ class AssignForm(forms.Form):
         empty_label="Unassigned",
         label="Assigned to",
     )
+
+
+class CommentForm(forms.ModelForm):
+    """Add a comment to an incident."""
+
+    class Meta:
+        model = Comment
+        # Only the text can be submitted. The incident and the author are set
+        # by the server (the incident from the address, the author from the
+        # logged-in user), so nobody can post a comment as someone else or
+        # onto an incident they can't see (blocks mass assignment).
+        fields = ("body",)
+        labels = {"body": "Add a comment"}
+        widgets = {"body": forms.Textarea(attrs={"rows": 3})}

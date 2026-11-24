@@ -66,4 +66,27 @@
 <h2>Description</h2>
 {# linebreaks keeps the user's paragraphs. It escapes the text first, so a <script> typed here shows as text and never runs (blocks stored XSS). #}
 <div class="description">{{ incident.description|linebreaks }}</div>
+
+{# id="comments" lets the page jump straight here after posting a comment. #}
+<h2 id="comments">Comments</h2>
+{% for comment in comments %}
+  <div class="comment">
+    <p class="muted">{{ comment.author.username }} ({{ comment.author.get_role_display }}), {{ comment.created_at|date:"j M Y, H:i" }}</p>
+    {# Escaped like the description: a <script> in a comment shows as text and never runs. #}
+    {{ comment.body|linebreaks }}
+  </div>
+{% empty %}
+  <p class="muted">No comments yet.</p>
+{% endfor %}
+
+{# The view only sends a comment form when the incident isn't closed. #}
+{% if comment_form %}
+  <form method="post" action="{% url 'comment_add' incident.pk %}">
+    {% csrf_token %}
+    {{ comment_form.as_p }}
+    <button type="submit">Post comment</button>
+  </form>
+{% else %}
+  <p class="muted">This incident is closed, so no new comments can be added.</p>
+{% endif %}
 {% endblock %}
