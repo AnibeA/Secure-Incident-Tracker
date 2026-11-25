@@ -10,6 +10,9 @@ from django.views.decorators.http import require_POST  # refuses anything but a 
 from django.urls import reverse_lazy            # turns a URL name like "login" into the actual address
 from django.views.generic import CreateView     # a ready-made view that shows a form and saves a new object
 
+from audit.log import record                    # writes an entry to the audit log
+from audit.models import AuditEvent
+
 from .decorators import admin_required          # our role check: Admins only
 from .forms import RoleForm, SignUpForm         # sign-up form, and the admin's change-role form
 from .models import User
@@ -56,9 +59,12 @@ def user_change_role(request, pk):
         raise PermissionDenied("The main admin account's role can't be changed here.")
 
     # prefix must match the one used in user_list, so the field names line up.
+    old_role = target.get_role_display()   # remember it for the log before it changes
     form = RoleForm(request.POST, instance=target, prefix=f"user{target.pk}")
     if form.is_valid():
         form.save()
+        record(request, AuditEvent.Action.ROLE_CHANGED,
+               f"{target.username}: {old_role} to {target.get_role_display()}")
         messages.success(request, f"{target.username} is now {target.get_role_display()}.")
     else:
         messages.error(request, "That isn't a valid role.")

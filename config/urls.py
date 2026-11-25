@@ -7,5 +7,10 @@ from django.urls import include, path      # include() hands a whole section of 
 urlpatterns = [
     path("accounts/", include("accounts.urls")),    # "/accounts/..." -> sign-up, login, logout
     path("admin/", admin.site.urls),                # "/admin/" -> Django's admin site
+    path("audit/", include("audit.urls")),          # "/audit/" -> the audit log (admins only)
     path("", include("incidents.urls")),            # everything else -> the incidents app (home page, incidents)
 ]
+
+# Every "403 Forbidden" in the app goes through this view, which writes it
+# to the audit log before showing our own "not allowed" page.
+handler403 = "audit.views.permission_denied"

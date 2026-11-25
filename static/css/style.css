@@ -52,3 +52,7 @@ button:disabled { background: #c8d0da; cursor: not-allowed; }
 /* ---- Comments ---- */
 .comment { background: #fff; border-radius: 8px; padding: 8px 16px; margin-bottom: 8px; }
 .comment .muted { margin-bottom: 0; }
+
+/* ---- Audit log: warning events in amber/red ---- */
+.event-LOGIN_FAILED, .event-ACCESS_DENIED { background: #fbf0db; color: #9a6300; }
+.event-LOCKED_OUT { background: #fbe6e4; color: #b3261e; }

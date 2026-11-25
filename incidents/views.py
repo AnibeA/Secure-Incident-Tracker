@@ -13,11 +13,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST        # refuses anything but a form submission (POST)
 
 from accounts.decorators import security_team_required       # our role check: Analysts and Admins only
+from audit.log import record                                 # writes an entry to the audit log
+from audit.models import AuditEvent
 from .forms import AssignForm, CommentForm, IncidentForm
 from .models import Incident
 
 
-def get_incident_for(user, pk):
+def get_incident_for(request, pk):
     """Fetch one incident, but only if this user is allowed to see it.
 
     Every view that opens a single incident goes through this one function,
@@ -28,7 +30,9 @@ def get_incident_for(user, pk):
     attacker can't use the response to discover which incident numbers exist.
     """
     incident = get_object_or_404(Incident, pk=pk)   # 404 if the number doesn't exist at all
-    if not incident.can_view(user):                 # the model's rule (Rule 2 in the study guide)
+    if not incident.can_view(request.user):         # the model's rule (Rule 2 in the study guide)
+        # Log the attempt for admins to review (the user still just sees "not found").
+        record(request, AuditEvent.Action.ACCESS_DENIED, f"Tried to open incident #{incident.pk}, which isn't theirs")
         raise Http404("Incident not found")         # same answer as "doesn't exist"
     return incident
 
@@ -59,6 +63,7 @@ def incident_create(request):
             incident = form.save(commit=False)
             incident.reporter = request.user
             incident.save()
+            record(request, AuditEvent.Action.INCIDENT_CREATED, f"Incident #{incident.pk}: {incident.title}")
             messages.success(request, "Incident reported.")
             return redirect("incident_detail", pk=incident.pk)
     else:
@@ -72,7 +77,7 @@ def incident_create(request):
 @login_required
 def incident_detail(request, pk):
     """Show one incident, if the user is allowed to see it."""
-    incident = get_incident_for(request.user, pk)   # IDOR check happens here
+    incident = get_incident_for(request, pk)   # IDOR check happens here
     context = {
         "incident": incident,
         # Tells the template whether to show the Edit button. Hiding the
@@ -95,7 +100,7 @@ def incident_detail(request, pk):
 @login_required
 def incident_edit(request, pk):
     """Edit an incident's details, if the rules allow it."""
-    incident = get_incident_for(request.user, pk)   # can they see it at all? (404 if not)
+    incident = get_incident_for(request, pk)   # can they see it at all? (404 if not)
 
     # They can see it, but can they edit it? Reporters only while it's Open,
     # and nobody once it's Closed. Here 403 is fine: they already know it exists.
@@ -120,14 +125,17 @@ def incident_edit(request, pk):
 @require_POST             # only a submitted form (POST, with its CSRF token) can change status
 def incident_change_status(request, pk):
     """Move an incident to its next status (Analysts and Admins only)."""
-    incident = get_incident_for(request.user, pk)
+    incident = get_incident_for(request, pk)
     new_status = request.POST.get("status", "")   # the status the button asked for
 
     # change_status() applies every rule in the model: the allowed order of
     # statuses, the closed lock, and separation of duties (nobody resolves or
     # closes an incident they reported). If any rule says no, it raises
     # PermissionDenied and the user gets "403 Forbidden"; nothing is saved.
+    old_label = incident.get_status_display()          # remember it for the log before it changes
     incident.change_status(request.user, new_status)
+    record(request, AuditEvent.Action.STATUS_CHANGED,
+           f"Incident #{incident.pk}: {old_label} to {incident.get_status_display()}")
 
     messages.success(request, f"Status changed to {incident.get_status_display()}.")
     return redirect("incident_detail", pk=incident.pk)
@@ -137,7 +145,7 @@ def incident_change_status(request, pk):
 @require_POST
 def incident_assign(request, pk):
     """Assign an incident to an analyst (Analysts and Admins only)."""
-    incident = get_incident_for(request.user, pk)
+    incident = get_incident_for(request, pk)
 
     # A closed incident is locked: nothing about it can change, including who owns it.
     if incident.is_locked:
@@ -148,6 +156,8 @@ def incident_assign(request, pk):
         # cleaned_data holds the checked value: an Analyst/Admin, or None for "Unassigned".
         incident.assigned_to = form.cleaned_data["assigned_to"]
         incident.save()
+        assignee = incident.assigned_to.username if incident.assigned_to else "nobody"
+        record(request, AuditEvent.Action.ASSIGNED, f"Incident #{incident.pk} assigned to {assignee}")
         messages.success(request, "Assignment updated.")
     else:
         # Someone sent a user who isn't on the security team (or an invalid ID).
@@ -161,7 +171,7 @@ def comment_add(request, pk):
     """Add a comment to an incident the user can see."""
     # The same access check as viewing: you can only comment on incidents
     # you're allowed to see (another reporter's incident gives 404).
-    incident = get_incident_for(request.user, pk)
+    incident = get_incident_for(request, pk)
 
     # Closed incidents are locked: no new comments either.
     if incident.is_locked:

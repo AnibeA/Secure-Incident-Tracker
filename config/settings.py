@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "axes",                          # login lockout after repeated failures (SR1)
     "accounts",                      # our users, roles, sign-up, user management
     "incidents",                     # our incidents, workflow, comments
+    "audit",                         # the audit log (SR5)
 ]
 
 # Middleware runs on every request, in this order, before any view.

@@ -23,7 +23,7 @@
       <nav>
         <a href="{% url 'home' %}">Incidents</a>
         {# Only admins see the Users link. The page itself checks the role again. #}
-        {% if user.is_admin_role %}<a href="{% url 'user_list' %}">Users</a>{% endif %}
+        {% if user.is_admin_role %}<a href="{% url 'user_list' %}">Users</a> <a href="{% url 'audit_log' %}">Audit log</a>{% endif %}
         <span>{{ user.username }} &middot; {{ user.get_role_display }}</span>
         {# Logout is a POST form with a CSRF token, never a plain link. #}
         <form method="post" action="{% url 'logout' %}">

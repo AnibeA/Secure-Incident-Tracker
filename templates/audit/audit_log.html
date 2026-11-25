@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% comment %}
+  The audit log (admins only), newest first, 50 per page. Read-only: there
+  are no edit or delete buttons, and no view exists that could do either.
+{% endcomment %}
+{% block title %}Audit log{% endblock %}
+{% block content %}
+<h1>Audit log</h1>
+{% if page.object_list %}
+  <table class="list">
+    <thead><tr><th>When</th><th>Who</th><th>Event</th><th>Detail</th><th>IP address</th></tr></thead>
+    <tbody>
+      {% for event in page.object_list %}
+        <tr>
+          <td>{{ event.timestamp|date:"j M Y, H:i:s" }}</td>
+          {# Escaped like everything else: a username typed into a failed login can't inject HTML here. #}
+          <td>{{ event.username|default:"-" }}</td>
+          <td><span class="pill event-{{ event.action }}">{{ event.get_action_display }}</span></td>
+          <td>{{ event.detail }}</td>
+          <td>{{ event.ip_address|default:"-" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if page.has_other_pages %}
+    <p class="pager">
+      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Newer</a>{% endif %}
+      Page {{ page.number }} of {{ page.paginator.num_pages }}
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Older</a>{% endif %}
+    </p>
+  {% endif %}
+{% else %}
+  <p class="empty">No events yet.</p>
+{% endif %}
+{% endblock %}
