@@ -1,0 +1,161 @@
+Run started:2026-11-25 13:13:01.002753+00:00
+
+Test results:
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'Correct-Horse-Battery-42'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: accounts/tests.py:11:18
+10	# A password that passes the policy (12+ characters, not common), used below.
+11	STRONG_PASSWORD = "Correct-Horse-Battery-42"
+12	
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: accounts/tests.py:71:21
+70	    def setUp(self):
+71	        self.admin = User.objects.create_user("adele", password="x", role=User.Role.ADMIN)
+72	        self.analyst = User.objects.create_user("ana", password="x", role=User.Role.ANALYST)
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: accounts/tests.py:72:23
+71	        self.admin = User.objects.create_user("adele", password="x", role=User.Role.ADMIN)
+72	        self.analyst = User.objects.create_user("ana", password="x", role=User.Role.ANALYST)
+73	        self.reporter = User.objects.create_user("rob", password="x")
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: accounts/tests.py:73:24
+72	        self.analyst = User.objects.create_user("ana", password="x", role=User.Role.ANALYST)
+73	        self.reporter = User.objects.create_user("rob", password="x")
+74	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'Correct-Horse-Battery-42'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: audit/tests.py:12:11
+11	
+12	PASSWORD = "Correct-Horse-Battery-42"
+13	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'guess-number-1'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: audit/tests.py:37:64
+36	        """Failed logins record the username tried, never the password."""
+37	        self.client.post(reverse("login"), {"username": "rita", "password": "guess-number-1"})
+38	        event = self.events(AuditEvent.Action.LOGIN_FAILED).get()
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'wrong-password'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: audit/tests.py:50:68
+49	        for _ in range(6):
+50	            self.client.post(reverse("login"), {"username": "rita", "password": "wrong-password"})
+51	        self.assertGreaterEqual(self.events(AuditEvent.Action.LOGIN_FAILED).count(), 5)
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: audit/tests.py:118:85
+117	        """A failed login can put any text in the log; the page must show it as text."""
+118	        self.client.post(reverse("login"), {"username": "<script>alert(1)</script>", "password": "x"})
+119	        self.client.force_login(self.admin)
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: incidents/tests.py:17:21
+16	        # setUp() runs before every single test, so each starts the same way.
+17	        self.alice = User.objects.create_user("alice", password="x")   # reporter
+18	        self.bob = User.objects.create_user("bob", password="x")       # another reporter
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: incidents/tests.py:18:19
+17	        self.alice = User.objects.create_user("alice", password="x")   # reporter
+18	        self.bob = User.objects.create_user("bob", password="x")       # another reporter
+19	        self.analyst = User.objects.create_user("ana", password="x", role=User.Role.ANALYST)
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: incidents/tests.py:19:23
+18	        self.bob = User.objects.create_user("bob", password="x")       # another reporter
+19	        self.analyst = User.objects.create_user("ana", password="x", role=User.Role.ANALYST)
+20	        # An incident reported by alice.
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: incidents/tests.py:195:17
+194	        # A different analyst can resolve it.
+195	        second = User.objects.create_user("sam", password="x", role=User.Role.ANALYST)
+196	        self.client.force_login(second)
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: incidents/tests.py:212:17
+211	        # Helper: take the incident all the way to Closed, as a second analyst.
+212	        closer = User.objects.create_user("cara", password="x", role=User.Role.ANALYST)
+213	        for status in ["TRIAGED", "INVESTIGATING", "RESOLVED", "CLOSED"]:
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'x'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: incidents/tests.py:271:17
+270	        """Closed lock covers comments too (403, nothing saved)."""
+271	        closer = User.objects.create_user("cara", password="x", role=User.Role.ANALYST)
+272	        for status in ["TRIAGED", "INVESTIGATING", "RESOLVED", "CLOSED"]:
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 1252
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 14
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 14
+		High: 0
+Files skipped (0):
